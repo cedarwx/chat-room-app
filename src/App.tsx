@@ -1,25 +1,31 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import { ChatProvider } from './context/ChatContext';
+import { Login } from './components/Login';
+import { ChatRoom } from './components/ChatRoom';
+import { User } from './types';
 import './App.css';
 
 function App() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <ChatProvider>
+      <div className="App">
+        {currentUser ? (
+          <ChatRoom currentUser={currentUser} onLogout={handleLogout} />
+        ) : (
+          <Login onLogin={handleLogin} />
+        )}
+      </div>
+    </ChatProvider>
   );
 }
 
