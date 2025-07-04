@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Message, Room } from '../types';
 import { useChat } from '../context/ChatContext';
+import { websocketService } from '../services/websocket';
+import { userService } from '../services/userService';
 
 interface ChatRoomProps {
   currentUser: User;
@@ -12,6 +14,7 @@ export function ChatRoom({ currentUser, onLogout }: ChatRoomProps) {
   const [message, setMessage] = useState('');
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userFilter, setUserFilter] = useState<'all' | 'online' | 'away' | 'offline'>('online');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,11 +44,51 @@ export function ChatRoom({ currentUser, onLogout }: ChatRoomProps) {
     }
   ];
 
-  const mockUsers: User[] = [
-    { id: '1', username: 'Alice', status: 'online', joinedAt: new Date() },
-    { id: '2', username: 'Bob', status: 'away', joinedAt: new Date() },
-    { id: '3', username: 'Charlie', status: 'offline', joinedAt: new Date() },
-  ];
+  // Use real users from context instead of mock users
+  const realUsers = state.users;
+  
+  // Filter users based on status
+  const filteredUsers = realUsers.filter(user => {
+    if (userFilter === 'all') return true;
+    return user.status === userFilter;
+  });
+
+  useEffect(() => {
+    // Initialize with real users from user service
+    const initialUsers = userService.getAllUsers();
+    initialUsers.forEach(user => {
+      dispatch({ type: 'ADD_USER', payload: user });
+    });
+  }, [dispatch]);
+
+  useEffect(() => {
+    // Initialize WebSocket connection
+    const wsService = websocketService;
+    
+    // Connect to WebSocket
+    wsService.connect('http://localhost:3001');
+    
+    // Set up event listeners for real-time user updates
+    wsService.on('userJoined', (user: User) => {
+      dispatch({ type: 'ADD_USER', payload: user });
+    });
+    
+    wsService.on('userLeft', (userId: string) => {
+      dispatch({ type: 'REMOVE_USER', payload: userId });
+    });
+    
+    wsService.on('userStatusChanged', (user: User) => {
+      dispatch({ type: 'UPDATE_USER', payload: user });
+    });
+    
+    // Authenticate the current user
+    wsService.authenticate(currentUser.id, 'mock-token');
+    
+    // Cleanup on unmount
+    return () => {
+      wsService.disconnect();
+    };
+  }, [currentUser.id, dispatch]);
 
   useEffect(() => {
     // Initialize with first room
@@ -238,13 +281,38 @@ export function ChatRoom({ currentUser, onLogout }: ChatRoomProps) {
 
           {/* Users */}
           <div style={{ padding: '15px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#a0aec0">
-                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-              </svg>
-              <span style={{ fontWeight: '600', fontSize: '14px' }}>Online Users</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#a0aec0">
+                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+                <span style={{ fontWeight: '600', fontSize: '14px' }}>Users</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <select
+                  value={userFilter}
+                  onChange={(e) => setUserFilter(e.target.value as 'all' | 'online' | 'away' | 'offline')}
+                  style={{
+                    fontSize: '12px',
+                    padding: '2px 6px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    backgroundColor: 'white',
+                    color: '#2d3748',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="online">Online</option>
+                  <option value="away">Away</option>
+                  <option value="offline">Offline</option>
+                  <option value="all">All</option>
+                </select>
+                <span style={{ fontSize: '12px', color: '#a0aec0' }}>
+                  {filteredUsers.length}
+                </span>
+              </div>
             </div>
-            {mockUsers.map(user => (
+            {filteredUsers.map(user => (
               <div key={user.id} style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -258,7 +326,38 @@ export function ChatRoom({ currentUser, onLogout }: ChatRoomProps) {
                   borderRadius: '50%',
                   backgroundColor: getStatusColor(user.status)
                 }} />
-                <span style={{ color: '#2d3748' }}>{user.username}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {user.avatar ? (
+                    <img 
+                      src={user.avatar} 
+                      alt={user.username}
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      backgroundColor: '#e2e8f0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '10px',
+                      color: '#718096'
+                    }}>
+                      {user.username.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span style={{ color: '#2d3748' }}>{user.username}</span>
+                  {user.id === currentUser.id && (
+                    <span style={{ fontSize: '10px', color: '#a0aec0' }}>(you)</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>

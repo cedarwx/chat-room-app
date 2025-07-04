@@ -86,6 +86,22 @@ The backend will be available at `http://localhost:3001`
 3. Enter a username to join the chat
 4. Select a room from the sidebar to start chatting
 
+### Real Users Integration
+
+The chat application now uses real users instead of mock data:
+
+- **User Management**: Users are managed through the `UserService` and stored in the global `ChatContext`
+- **Real-time Updates**: WebSocket integration provides real-time user status updates
+- **User Filtering**: Filter users by status (Online, Away, Offline, All)
+- **User Avatars**: Users can have custom avatars using DiceBear API
+- **Status Indicators**: Real-time status indicators show user availability
+
+#### User Features:
+- **Online Status**: Real-time online/away/offline status
+- **User Profiles**: Display user avatars and join times
+- **User Count**: Shows filtered user counts
+- **Current User**: Highlights the current user with "(you)" indicator
+
 ### Features Guide
 
 #### Sending Messages

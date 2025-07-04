@@ -4,6 +4,7 @@ import { ChatState, User, Room, Message, ConnectionStatus, UserSettings, FileUpl
 // Action types
 type ChatAction =
   | { type: 'SET_CURRENT_USER'; payload: User }
+  | { type: 'CLEAR_CURRENT_USER' }
   | { type: 'SET_CURRENT_ROOM'; payload: Room }
   | { type: 'ADD_ROOM'; payload: Room }
   | { type: 'UPDATE_ROOM'; payload: Room }
@@ -56,6 +57,9 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
     case 'SET_CURRENT_USER':
       return { ...state, currentUser: action.payload };
+    
+    case 'CLEAR_CURRENT_USER':
+      return { ...state, currentUser: null };
     
     case 'SET_CURRENT_ROOM':
       return { ...state, currentRoom: action.payload };
