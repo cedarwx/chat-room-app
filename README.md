@@ -164,22 +164,75 @@ The server runs on port 3001 by default. You can change this by setting the `POR
 
 ## 🚀 Deployment
 
-### Frontend Deployment
-```bash
-# Build the production version
-yarn build
+### Frontend Deployment (Vercel)
 
-# The build folder contains the production-ready files
-```
+1. **Build the production version:**
+   ```bash
+   yarn build
+   ```
+
+2. **Deploy to Vercel:**
+   - Connect your GitHub repository to Vercel
+   - Set the following environment variables in Vercel:
+     - `REACT_APP_WEBSOCKET_URL`: Your deployed backend WebSocket URL (e.g., `wss://your-backend-domain.com`)
+     - `REACT_APP_API_URL`: Your deployed backend API URL (e.g., `https://your-backend-domain.com`)
+
+3. **Vercel Configuration:**
+   - Build Command: `yarn build`
+   - Output Directory: `build`
+   - Install Command: `yarn install`
 
 ### Backend Deployment
-```bash
-# Install production dependencies
-yarn install --production
 
-# Start the production server
-yarn start
+You need to deploy your backend server separately. Here are some options:
+
+#### Option 1: Railway
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Deploy your server
+cd server
+railway up
 ```
+
+#### Option 2: Heroku
+```bash
+# Create a Procfile in the server directory
+echo "web: node server.js" > server/Procfile
+
+# Deploy to Heroku
+cd server
+heroku create your-app-name
+git push heroku main
+```
+
+#### Option 3: DigitalOcean App Platform
+- Upload your server code
+- Set the port to `process.env.PORT || 3001`
+- Configure environment variables
+
+### Environment Variables for Production
+
+Make sure to set these environment variables in your deployment platform:
+
+**Frontend (Vercel):**
+- `REACT_APP_WEBSOCKET_URL`: Your backend WebSocket URL
+- `REACT_APP_API_URL`: Your backend API URL
+
+**Backend:**
+- `PORT`: Server port (usually set automatically)
+- `CORS_ORIGIN`: Your frontend domain (e.g., `https://your-app.vercel.app`)
+
+### Important Notes
+
+1. **CORS Configuration**: Update your backend CORS settings to allow your Vercel domain
+2. **WebSocket Protocol**: Use `wss://` for secure WebSocket connections in production
+3. **Environment Variables**: Always use environment variables for URLs in production
+4. **Database**: Consider using a persistent database instead of in-memory storage for production
 
 ## 🤝 Contributing
 

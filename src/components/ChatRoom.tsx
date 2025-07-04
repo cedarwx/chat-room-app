@@ -15,6 +15,7 @@ export function ChatRoom({ currentUser, onLogout }: ChatRoomProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [userFilter, setUserFilter] = useState<'all' | 'online' | 'away' | 'offline'>('online');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,10 +66,18 @@ export function ChatRoom({ currentUser, onLogout }: ChatRoomProps) {
     // Initialize WebSocket connection
     const wsService = websocketService;
     
-    // Connect to WebSocket
-    wsService.connect('http://localhost:3001');
+    // Connect to WebSocket (will use environment-based URL)
+    wsService.connect();
     
     // Set up event listeners for real-time user updates
+    wsService.on('connect', () => {
+      setConnectionStatus('connected');
+    });
+    
+    wsService.on('disconnect', () => {
+      setConnectionStatus('disconnected');
+    });
+    
     wsService.on('userJoined', (user: User) => {
       dispatch({ type: 'ADD_USER', payload: user });
     });
@@ -197,7 +206,24 @@ export function ChatRoom({ currentUser, onLogout }: ChatRoomProps) {
             </div>
             <div>
               <div style={{ fontWeight: '600', fontSize: '14px' }}>{currentUser.username}</div>
-              <div style={{ fontSize: '12px', color: '#48bb78' }}>Online</div>
+              <div style={{ 
+                fontSize: '12px', 
+                color: connectionStatus === 'connected' ? '#48bb78' : 
+                       connectionStatus === 'connecting' ? '#ed8936' : '#e53e3e',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <div style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: connectionStatus === 'connected' ? '#48bb78' : 
+                                  connectionStatus === 'connecting' ? '#ed8936' : '#e53e3e'
+                }} />
+                {connectionStatus === 'connected' ? 'Connected' : 
+                 connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+              </div>
             </div>
           </div>
           <button

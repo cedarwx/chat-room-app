@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { Message, User, Room, ConnectionStatus } from '../types';
+import { getWebSocketUrl } from '../config/environment';
 
 export interface WebSocketEvents {
   // Connection events
@@ -58,10 +59,11 @@ class WebSocketService {
     });
   }
 
-  connect(url: string = 'http://localhost:3001'): Promise<void> {
+  connect(url?: string): Promise<void> {
+    const wsUrl = url || getWebSocketUrl();
     return new Promise((resolve, reject) => {
       try {
-        this.socket = io(url, {
+        this.socket = io(wsUrl, {
           transports: ['websocket', 'polling'],
           reconnection: true,
           reconnectionAttempts: this.maxReconnectAttempts,
@@ -70,7 +72,7 @@ class WebSocketService {
         });
 
         this.socket.on('connect', () => {
-          console.log('Connected to WebSocket server');
+          console.log('✅ Connected to WebSocket server at:', wsUrl);
           this.reconnectAttempts = 0;
           this.startHeartbeat();
           this.emit('connect');
@@ -78,18 +80,18 @@ class WebSocketService {
         });
 
         this.socket.on('disconnect', (reason: string) => {
-          console.log('Disconnected from WebSocket server:', reason);
+          console.log('❌ Disconnected from WebSocket server:', reason);
           this.stopHeartbeat();
           this.emit('disconnect', reason);
         });
 
         this.socket.on('reconnect', (attemptNumber: number) => {
-          console.log('Reconnected to WebSocket server, attempt:', attemptNumber);
+          console.log('🔄 Reconnected to WebSocket server, attempt:', attemptNumber);
           this.emit('reconnect', attemptNumber);
         });
 
         this.socket.on('reconnect_error', (error: Error) => {
-          console.error('Reconnection error:', error);
+          console.error('🔄 Reconnection error:', error);
           this.emit('reconnect_error', error);
         });
 
@@ -147,12 +149,13 @@ class WebSocketService {
         });
 
         this.socket.on('error', (error: string) => {
-          console.error('WebSocket error:', error);
+          console.error('🚨 WebSocket error:', error);
           this.emit('error', error);
         });
 
       } catch (error) {
-        console.error('Failed to connect to WebSocket server:', error);
+        console.error('🚨 Failed to connect to WebSocket server:', error);
+        console.error('Attempted URL:', wsUrl);
         reject(error);
       }
     });
